@@ -1,0 +1,137 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define DHTPIN_SOIL 2     
+#define DHTPIN_AIR 3      
+#define DHTTYPE DHT22   
+
+#define LED_RED 6         
+#define LED_GREEN 7       
+#define LED_BLUE 8        
+
+DHT dhtSoil(DHTPIN_SOIL, DHTTYPE);
+DHT dhtAir(DHTPIN_AIR, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+  
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+
+  dhtSoil.begin();
+  dhtAir.begin();
+  
+ 
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
+
+  display.display();
+  delay(2000);
+  
+  display.clearDisplay();
+  
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.println("Air:");
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,20);
+  display.println("Soil:");
+
+  display.display();
+}
+
+void loop() {
+  delay(2000);
+
+  // Read temp and humidity 
+  float temperatureAir = dhtAir.readTemperature();
+  float humidityAir = dhtAir.readHumidity();
+  
+  float temperatureSoil = dhtSoil.readTemperature();
+  float humiditySoil = dhtSoil.readHumidity();
+
+  if (isnan(temperatureAir) || isnan(humidityAir) || isnan(temperatureSoil) || isnan(humiditySoil)) {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+
+
+//THIS WILL BE CHANGED BASEDD ON THE ACTUAL PLANT IT IS USED WITH
+  // Control RGB LED based on soil moisture
+  if (humiditySoil > 35) { // Good condition
+    setLEDColor(0, 255, 0); // Green
+  } else if (humiditySoil >= 25 && humiditySoil <= 35) { // Okay condition
+    setLEDColor(255, 255, 0); // Yellow
+  } else { // Bad condition
+    setLEDColor(255, 0, 0); // Red
+  }
+  
+  display.clearDisplay();
+
+  // Display Air Conditions
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.println("Air:");
+
+  // Display air temperature
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,10);
+  display.print("Temperature: ");
+  display.print(temperatureAir);
+  display.println(" *C");
+
+  // Display air humidity
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,20);
+  display.print("Humidity: ");
+  display.print(humidityAir);
+  display.println(" %");
+
+  // Display Soil Conditions
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,30);
+  display.println("Soil:");
+
+  // Display soil temperature
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,40);
+  display.print("Temperature: ");
+  display.print(temperatureSoil);
+  display.println(" *C");
+
+  // Display soil moisture
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,50);
+  display.print("Moisture: ");
+  display.print(humiditySoil);
+  display.println(" %");
+
+  display.display();
+}
+
+void setLEDColor(int red, int green, int blue) {
+  analogWrite(LED_RED, red);
+  analogWrite(LED_GREEN, green);
+  analogWrite(LED_BLUE, blue);
+}
